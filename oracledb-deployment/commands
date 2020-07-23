@@ -1,0 +1,37 @@
+# Create namespace
+kubectl create ns oracledb
+
+# Create configmap
+kubectl create configmap oradb --from-env-file=oracle.properties -n oracledb
+
+# Create Secret
+kubectl create secret docker-registry oracle \
+--docker-server=docker.io \
+--docker-username=<docker username> \
+--docker-password=<docker password> \
+--docker-email=<docker password> \
+-n oracledb
+
+# Create deployment
+kubectl apply -f oracledb_12c.yaml -n oracledb
+
+# See deployment is created
+kubectl get deployments -n oracledb
+
+# Check logs of pod if Database started
+kubectl logs <POD> -n oracledb
+
+# Get the service URL
+kubectl get services -n oracledb
+minikube service oracle12c -n oracledb --url
+
+
+# Exec into pod and run following command to get OracleDB is running
+sqlplus system/<password>@<Service-URL>/PSTG.localdomain
+
+# for increamentle backup make sure database should be in ARCHIVELOG mode if not then run following commands in database
+shutdown immediate
+startup mount
+alter database archivelog;
+alter database open;
+

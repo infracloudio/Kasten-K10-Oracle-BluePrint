@@ -1,0 +1,7 @@
+
+# Build Docker images
+docker build -t ajaykangare/oracledb-rman-sidecar . -f Dockerfile
+
+# Run Docker image
+docker run -it ajaykangare/oracledb-rman-sidecar rman
+
