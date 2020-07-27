@@ -1,0 +1,11 @@
+INSERT INTO emp_details VALUES (NUMBER, 'RamNUMBER',35);
+INSERT INTO emp_details VALUES (NUMBER, 'RamNUMBER',36);
+INSERT INTO emp_details VALUES (NUMBER, 'RamNUMBER',37);
+INSERT INTO emp_details VALUES (NUMBER, 'RamNUMBER',38);
+INSERT INTO emp_details VALUES (NUMBER, 'RamNUMBER',39);
+INSERT INTO emp_project VALUES (NUMBER, 'Kasten', 1);
+INSERT INTO emp_salary VALUES (NUMBER, Salary, 'Date');
+SELECT COUNT(*) from emp_details;
+SELECT COUNT(*) from emp_project;
+SELECT COUNT(*) from emp_salary;
+EXIT;
