@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oracle19ee 
+  namespace: oracle19ee
+  labels:
+    app: database
+    version: 19.3.0.1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database
+      version: 19.3.0.1
+  template:
+    metadata:
+      name: oracle19ee
+      labels:
+        app: database
+        version: 19.3.0.1
+    spec:
+      securityContext:
+        fsGroup: 54321      
+      volumes:       
+        - name: oracledb-storage
+          persistentVolumeClaim:
+            claimName: oracle19ee-pvc
+      containers:
+        - name: oracle19ee
+          image: oracle/database:19.3.0-ee
+          command:
+          - /opt/oracle/runOracle.sh
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              memory: 8Gi
+          ports:
+            - name: listener
+              containerPort: 1521
+              hostPort: 1521
+            - name: oemexpress
+              containerPort: 5500
+              hostPort: 5500
+          volumeMounts:        
+             - name: oracledb-storage
+               mountPath: "/opt/oracle/oradata"
+          env:
+            - name: ORACLE_SID
+              valueFrom:
+                configMapKeyRef:
+                  name: oradb #Read from a configmap called oradb
+                  key: ORACLE_SID #Read the key call ORALCE_SID
+            - name: ORACLE_PDB
+              valueFrom:
+                configMapKeyRef:
+                  name: oradb #Read from a configmap called oradb
+                  key: ORACLE_PDB #Read the key call ORACLE_PDB      
+            - name: ORACLE_PWD
+              valueFrom:
+                configMapKeyRef:
+                  name: oradb #Read from a configmap called oradb
+                  key: ORACLE_PWD #Read the key call ORACLE_PWD
+            - name: ORACLE_CHARACTERSET
+              valueFrom:
+                configMapKeyRef:
+                  name: oradb #Read from a configmap called oradb
+                  key: ORACLE_CHARACTERSET #Read the key call ORACLE_CHARACTERSET
+          readinessProbe:
+            exec:
+              command:
+              - /bin/bash
+              - -c      
+              - . /home/oracle/.bashrc; echo -e "connect / as sysdba\nset heading off\n set pagesize 0\nselect status from v\$instance;\nexit\n" > /home/oracle/status.sql; status=`$ORACLE_HOME/bin/sqlplus -S /nolog @/home/oracle/status.sql`;cmdret=$?;echo STATUS=$status ;  if [[ $cmdret == 0 ]] && [[ $status == "MOUNTED"  ||  $status == "OPEN" ]] ; then  exit 0 ;else exit 1; fi
+            initialDelaySeconds: 180
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oracle19ee
+  namespace: oracle19ee
+spec:
+  selector:
+    app: database
+    version: 19.3.0.1
+  type: LoadBalancer
+  ports:
+  - protocol: TCP
+    port: 1521
+    targetPort: 1521
