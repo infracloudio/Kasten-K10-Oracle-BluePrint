@@ -6,6 +6,24 @@
 
 This Oracle 19c database deployment on [Kubernetes](http://kubernetes.io) cluster with persistent storage.
 
+## Create a docker image by cloning the Oracle maintained Docker files from [GitHub](https://github.com/oracle/docker-images).
+
+```bash
+
+#Clone the code from repository
+$ git clone https://github.com/oracle/docker-images.git
+
+#Nevigate to the docker file directory
+$ cd docker-images/OracleDatabase/SingleInstance/dockerfiles
+
+#Build the image
+$ ./buildDockerImage.sh -v 19.3.0 -ee
+
+#List the docker images
+$ docker images
+
+```
+
 ## Creating Oracle 19c deployment
 
 ```bash
@@ -28,6 +46,29 @@ The command deploys a Oracle instance in the `oracle19ee` namespace.
 By default a password is reffered from the configmap `oradb`. Also you can get the password from running oracle pod `kubectl -n oracle19ee logs [YOUR_POD_NAME] -f`
 
 > **Tip**: List all releases using `kubectl -n oracle19ee get all` .
+
+## Connect to Database from inside the pod
+
+```bash
+
+# Exec into pod and run following command to get OracleDB is running
+$ kubectl -n oracle19ee exec -it [YOUR_POD_NAME] -- bash
+
+# And now you can connect to oracledb
+$ sqlplus / as sysdba
+
+```
+## Connect to Database from outside the pod
+
+```bash
+
+# Get service url of running deployment
+$ kubectl -n oracle19ee get service
+
+# And now you can connect to oracledb
+$ sqlplus sys/{ORACLE_PASSWD}@{SERVICE_URL}:{PORT_NO}/{DB_NAME} as sysdba
+
+```
 
 ## Cleanup
 
