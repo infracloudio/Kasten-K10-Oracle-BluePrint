@@ -1,0 +1,68 @@
+apiVersion: cr.kanister.io/v1alpha1
+kind: Blueprint
+metadata:
+  name: oracle-blueprint
+actions:
+  backupPrehook:
+    type: Deployment
+    phases:
+    - func: KubeExec
+      name: makePGCheckPoint
+      args:
+        namespace: "{{ .Deployment.Namespace }}"
+        pod: "{{ index .Deployment.Pods 0 }}"
+        container: database
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          source /home/oracle/.bashrc      
+          printf "prompt ---------------------------------Starting Recovery-----------------------------------; \n ALTER SESSION SET NLS_DATE_FORMAT = 'MM/DD/YYYY HH24:MI:SS'; \nrecover database snapshot time '$(date -u '+%Y/%m/%d %H:%M:%S')'; \nalter database open;\n prompt ---------------------------------Finished Recovery------------------------------------;\n exit;" > /ORCL/restore.sql;
+          printf "Alter system archive log current;" > /u01/backupprehook.sql; $ORACLE_HOME/bin/sqlplus sys/$DB_PASSWD as sysdba @/u01/backupprehook.sql          
+  backupPosthook:
+    type: Deployment
+    phases:
+    - func: KubeExec
+      name: afterBackup
+      args:
+        namespace: "{{ .Deployment.Namespace }}"
+        pod: "{{ index .Deployment.Pods 0 }}"
+        container: database
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          source /home/oracle/.bashrc
+          printf "Alter system archive log current;" > /u01/backupposthook.sql; $ORACLE_HOME/bin/sqlplus sys/$DB_PASSWD as sysdba @/u01/backupposthook.sql
+  restore:
+    type: Deployment
+    phases:
+    - func: KubeExec
+      name: restoreCheckPoint
+      args:
+        namespace: "{{ .Deployment.Namespace }}"
+        pod: "{{ index .Deployment.Pods 0 }}"
+        container: database
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          printf "\nStarted Recovery '$(date -u '+%Y/%m/%d %H:%M:%S')'\n" > /ORCL/recoverylogs
+          source /home/oracle/.bashrc
+          echo $ORACLE_HOME >> /ORCL/recoverylogs
+          echo $ORACLE_SID >> /ORCL/recoverylogs
+          echo $PATH >> /ORCL/recoverylogs
+          $ORACLE_HOME/bin/sqlplus sys/$DB_PASSWD as sysdba @/ORCL/restore.sql >> /ORCL/recoverylogs
+          printf "\nFinished Recovery '$(date -u '+%Y/%m/%d %H:%M:%S')'\n" >> /ORCL/recoverylogs
