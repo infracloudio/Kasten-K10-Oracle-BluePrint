@@ -19,6 +19,12 @@ spec:
         app: oracle12c
         version: 12.1.0.2
     spec:
+      securityContext:
+        fsGroup: 54321      
+      volumes:       
+        - name: oracledb-storage
+          persistentVolumeClaim:
+            claimName: oracledb-pvc
       containers:
       - name: database
         command:
@@ -31,6 +37,9 @@ spec:
         ports:
         - containerPort: 1521
           hostPort: 1521
+        volumeMounts:        
+        - name: oracledb-storage
+          mountPath: "/ORCL"
         env:
           - name: DB_SID
             valueFrom:
@@ -62,6 +71,12 @@ spec:
               configMapKeyRef:
                 name: oradb #Read from a configmap called oradb
                 key: DB_MEMORY #Read the key call DB_MEMORY
+        readinessProbe:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - . /home/oracle/.bashrc; echo -e "connect / as sysdba\nset heading off\n set pagesize 0\nselect status from v\$instance;\nexit\n" > /home/oracle/status.sql; status=`$ORACLE_HOME/bin/sqlplus -S /nolog @/home/oracle/status.sql`;cmdret=$?;echo STATUS=$status ;  if [[ $cmdret == 0 ]] && [[ $status == "MOUNTED"  ||  $status == "OPEN" ]] ; then  exit 0 ;else exit 1; fi 
       imagePullSecrets:
       - name: oracle
 ---
@@ -74,7 +89,7 @@ spec:
   selector:
     app: oracle12c
     version: 12.1.0.2
-  type: NodePort
+  type: LoadBalancer
   ports:
   - protocol: TCP
     port: 1521
