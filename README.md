@@ -16,7 +16,8 @@ Make sure the Kasten(K10) application is installed in your cluster, if not pleas
 Once you access the K10 dashboard, create a K10 profile.
 1. Go to Setting > Location > Create Location Profile
 2. Provide details required, validate and save.
-3. ![K10 Profile](Images/location_profile.png)
+
+![K10 Profile](Images/location_profile.png)
 
 Now create a K10 policy for your application
 1. Go to Policies
@@ -26,6 +27,7 @@ Now create a K10 policy for your application
 5. Select the available application
 6. Select Location Profile for Kanister Actions
 7. Create Policy
+
 ![K10 Policy1](Images/policy_1.png) 
 ![K10 Policy2](Images/policy_2.png) 
 ![K10 Policy3](Images/policy_3.png)
@@ -55,6 +57,7 @@ $ cd /opt/oracle/oradata/swingbench/bin/
 $ ./oewizrd
 ```
 ![K10 Swingbench](Images/swingbench.png)
+
 # OR
 
 ```bash
@@ -75,6 +78,7 @@ $ ./oewizard -scale 1 -dbap {DB_PASSWD} -u {username} -p {password} -cl -cs //{O
 $ ./oewizard -scale 1 -dbap "Kube#2020" -u soe -p soe -cl -cs //localhost:1521/ORCL -df '/opt/oracle/oradata/ORCL/ORCLPDB1/soe.dbf' -create
 ```
 ![K10 oewizard](Images/oewizard_output.png) 
+
 # Now start the load
 
 # concurrent number of users
