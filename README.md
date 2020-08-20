@@ -7,7 +7,7 @@ This Oracle database deployment on [Kubernetes](http://kubernetes.io) cluster wi
 
 ## Installing the Oracle DB
 
-To install the Oracle database using deployment file with differnt available 12c, 18c and 19c please refer respecitive folder for the same. 
+To install the Oracle database using deployment file with differnt available 12c, 18c and 19c please refer oracle12c, oracle18ee and oracle19ee directory respecitively. 
 
 ## Integrating with K10
 
