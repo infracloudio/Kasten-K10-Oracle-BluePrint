@@ -1,0 +1,65 @@
+apiVersion: cr.kanister.io/v1alpha1
+kind: Blueprint
+metadata:
+  name: oracle19ee-blueprint
+actions:
+  backupPrehook:
+    type: Deployment
+    phases:
+    - func: KubeExec
+      name: makePGCheckPoint
+      args:
+        namespace: "{{ .Deployment.Namespace }}"
+        pod: "{{ index .Deployment.Pods 0 }}"
+        container: oracle19ee
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          printf "prompt ---------------------------------Starting Recovery-----------------------------------; \nALTER SESSION SET NLS_DATE_FORMAT = 'MM/DD/YYYY HH24:MI:SS'; \nrecover database snapshot time '$(date -u '+%Y/%m/%d %H:%M:%S')'; \nAlter database open; \nselect con_id, open_mode, name from v\$pdbs; \nAlter pluggable database all open read write; \nprompt -------------------------------------------Finished Recovery------------------------------------;\n exit;" > /opt/oracle/oradata/restore.sql;
+          printf "alter database backup controlfile to '/opt/oracle/oradata/controlfile.backup.ctl'; \nAlter system archive log current;" > /home/oracle/backupprehook.sql; $ORACLE_HOME/bin/sqlplus sys/$ORACLE_PWD as sysdba @/home/oracle/backupprehook.sql          
+  backupPosthook:
+    type: Deployment
+    phases:
+    - func: KubeExec
+      name: afterBackup
+      args:
+        namespace: "{{ .Deployment.Namespace }}"
+        pod: "{{ index .Deployment.Pods 0 }}"
+        container: oracle19ee
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          printf "Alter system archive log current;" > /home/oracle/backupposthook.sql; $ORACLE_HOME/bin/sqlplus sys/$ORACLE_PWD as sysdba @/home/oracle/backupposthook.sql
+  restore:
+    type: Deployment
+    phases:
+    - func: KubeExec
+      name: restoreCheckPoint
+      args:
+        namespace: "{{ .Deployment.Namespace }}"
+        pod: "{{ index .Deployment.Pods 0 }}"
+        container: oracle19ee
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          printf "\nStarted Recovery '$(date -u '+%Y/%m/%d %H:%M:%S')'\n" > /opt/oracle/oradata/recoverylogs
+          echo $ORACLE_HOME >> /opt/oracle/oradata/recoverylogs
+          echo $ORACLE_SID >> /opt/oracle/oradata/recoverylogs
+          echo $PATH >> /opt/oracle/oradata/recoverylogs
+          $ORACLE_HOME/bin/sqlplus sys/$ORACLE_PWD as sysdba @/opt/oracle/oradata/restore.sql >> /opt/oracle/oradata/recoverylogs
+          printf "\nFinished Recovery '$(date -u '+%Y/%m/%d %H:%M:%S')'\n" >> /opt/oracle/oradata/recoverylogs
