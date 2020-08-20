@@ -1,9 +1,25 @@
 # Application Consistent Oracle Database Backup
 [ORACLE](https://www.oracle.com/database/technologies/) Database is a multi-model database management system produced and marketed by Oracle Corporation. It is a database commonly used for running online transaction processing, data warehousing and mixed database workloads.
 
+In Application consistent backup, Application is notified that the backup is being taken and application transactions/writes are quiesced for a short duration. 
+
+In the case of Oracle database, a consistent backup would be done when:
+1. Current redo is archived, triggering a checkpoint which would write dirty buffer into the files. 
+2. The database is put in backup mode (11g) or using storage snapshot optimization in 12c and later. This will freeze the I/O while the snapshot is taken. 
+3. Third-party snapshot is taken.
+4. End of backup mode, not required for 12c and later.
+5. Switch of the log file and optionally, backup of Control file to a backup file is taken.
+
+Referncers: 
+[How to prepare the Oracle database for Snapshot Technologies and ensure a consistent recovery [221779.1]](https://support.oracle.com/epmos/faces/DocumentDisplay?id=221779.1&parent=WIDGET_RECENT_DB)
+[Supported Backup, Restore and Recovery Operations using Third-Party Snapshot Technologies [604683.1]](https://support.oracle.com/epmos/faces/Dashboard?_afrLoop=437426810276052&_afrWindowMode=0&_adf.ctrl-state=20gc9kh0o_4#)
+
+Block Corruption (particularly lost write) can not be fixed by Snapshot based recovery. It requires RMAN or Dataguard for full protection. 
+https://www.oracle.com/technetwork/database/availability/maa-datacorruption-bestpractices-396464.pdf 
+
 ## Introduction
 
-This Oracle database deployment on [Kubernetes](http://kubernetes.io) cluster with persistent storage.
+This Oracle database deployment on [Kubernetes](http://kubernetes.io) cluster with persistent storage and then perform the backup and restore with [Kasten](https://docs.kasten.io/latest/).
 
 ## Installing the Oracle DB
 
@@ -11,7 +27,7 @@ To install the Oracle database using deployment file with differnt available 12c
 
 ## Integrating with K10
 
-Make sure the Kasten(K10) application is installed in your cluster, if not please install it and refer [doc](https://docs.kasten.io/latest/install/index.html)
+Make sure the Kasten(K10) application is installed in your cluster, if not please install it, refer [doc](https://docs.kasten.io/latest/install/index.html)
 
 Once you access the K10 dashboard, create a K10 profile.
 1. Go to Setting > Location > Create Location Profile
@@ -34,7 +50,11 @@ Now create a K10 policy for your application
 
 ### Create Blueprint
 
-Create Blueprint in the same namespace as the Kanister controller
+Create Blueprint in the same namespace as the Kanister controller.
+This blueprint is having 3 actions which are performed while backup and restore.
+1. `backupPrehook`: This action will be executed before the actual snapshot backup, create a restore.sql script with recovery time and sql statement to recover from the database first in host persistance location and then archive the current logs.
+2. `backupPosthook`: This action will be executed after the snapshot backup is done and archive the current logs.
+3. `restore`: After restore from k10 dashboard and once pod is in ready state this action will be executed and run the restore.sql script to make sure that recovery is done properly.
 
 ```bash
 $ kubectl create -f blueprint.yaml -n kasten-io
@@ -60,6 +80,7 @@ $ ./oewizrd
 
 # OR
 
+You can copy the swingbench to your running pod and run there for faster operation.
 ```bash
 #Download and copy SwingBench zip file to pod persistant volume.
 $ kubectl -n NAMESPACE cp swingbenchlatest.zip {POD_NAME}:/opt/oracle/oradata/
@@ -79,19 +100,18 @@ $ ./oewizard -scale 1 -dbap "Kube#2020" -u soe -p soe -cl -cs //localhost:1521/O
 ```
 ![K10 oewizard](Images/oewizard_output.png) 
 
-# Now start the load
+# Now start the load from the pod itself.
 
+```bash
 # concurrent number of users
 $ USERS=30 	
 # for five minutes
 $ RUNTIME="00:05:00"
 $ ./charbench -c ../configs/SOE_Server_Side_V2.xml -cs //localhost:1521/ORCL -dt thin -u soe -p soe -uc $USERS -v users,tps,tpm,dml,errs,resp -mr -min 0 -max 100 -ld   1000 -rt $RUNTIME
-
 # Note you can change the values as per your requirement.
 ```
-#OR
+# OR
 You can use Swingbench GUI app to generate load from outside the pod as well.
-
 ```bash
 $ cd /opt/oracle/oradata/swingbench/bin/
 $ ./swingbench
@@ -131,7 +151,7 @@ $ select SYS_EXTRACT_UTC(max(order_date)) from soe.orders;
 If you run into any issues with the above commands, you can check the logs of the controller using:
 
 ```bash
-$ kubectl --namespace kasten-io logs <KANISTER_POD_NAME>
+$ kubectl --namespace kasten-io logs <KANISTER_SERVICE_POD_NAME>
 ```
 
 ## Cleanup
@@ -148,3 +168,4 @@ Remove Blueprint
 ```bash
 $ kubectl delete blueprints oracle-blueprint -n kasten-io
 ```
+
