@@ -183,3 +183,8 @@ Remove Blueprint
 $ kubectl delete blueprints oracle-blueprint -n kasten-io
 ```
 
+
+## Conclusion
+Below is the database performance charts showing number of commits, database time and redo generated during the test.  As you can see in the below chart, we ran a test at 7:52, Database time has a spike but there is not much impact on the number of transactions processed by the database. End user response time was intact.  The spike is mainly due to increased time taken the `log file parallel write` event for the short duration when the snapshot was taken. 
+
+![Test 1](Images/Test_1_30u.png)
