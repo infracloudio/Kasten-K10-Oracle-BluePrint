@@ -51,12 +51,12 @@ $ kubectl -n {NAMESPACE} annotate deployment.apps/{DEPLOYMENT_NAME} kanister.kas
 
 Once Oracle is running, you can populate it with some data. Let's create schema and generate some load
 To generate data in Oracle database for simulating load, we are using [Swingbench](http://www.dominicgiles.com/swingbench.html). Swingbench is equipped with a utility like oewizard which loads data.
-You can use SwingBench GUI to run the load but may lead to increase some responce time.
+You can use SwingBench GUI from outside the pod to run the load but may lead to increase some responce time.
 ```bash
 $ cd /opt/oracle/oradata/swingbench/bin/
 $ ./oewizrd
 ```
-![K10 Swingbench](Images/swingbench.png)
+![K10 Oewizard](Images/oewizard_ui.png)
 
 # OR
 
@@ -89,6 +89,14 @@ $ ./charbench -c ../configs/SOE_Server_Side_V2.xml -cs //localhost:1521/ORCL -dt
 
 # Note you can change the values as per your requirement.
 ```
+#OR
+You can use Swingbench GUI app to generate load from outside the pod as well.
+
+```bash
+$ cd /opt/oracle/oradata/swingbench/bin/
+$ ./swingbench
+```
+![K10 Swingbench](Images/swingbench.png)
 
 ## Protect the Application
 
