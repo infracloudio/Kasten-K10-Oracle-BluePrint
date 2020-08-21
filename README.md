@@ -67,7 +67,7 @@ $ kubectl -n {NAMESPACE} annotate deployment.apps/{DEPLOYMENT_NAME} kanister.kas
 
 ```
 
-# Create a schema and run the Load
+### Create a schema and run the Load
 
 Once Oracle is running, you can populate it with some data. Let's create schema and generate some load
 To generate data in Oracle database for simulating load, we are using [Swingbench](http://www.dominicgiles.com/swingbench.html). Swingbench is equipped with a utility like oewizard which loads data.
@@ -100,7 +100,7 @@ $ ./oewizard -scale 1 -dbap "Kube#2020" -u soe -p soe -cl -cs //localhost:1521/O
 ```
 ![K10 oewizard](Images/oewizard_output.png) 
 
-# Now start the load from the pod itself.
+### Now start the load from the pod itself.
 
 ```bash
 # concurrent number of users
@@ -153,6 +153,20 @@ If you run into any issues with the above commands, you can check the logs of th
 ```bash
 $ kubectl --namespace kasten-io logs <KANISTER_SERVICE_POD_NAME>
 ```
+## Performance deatils of Oracle Database
+
+We can export the `AWR` report from the database and analyze the performance impact while backup.
+```bash
+$ kubectl -n {NAMESPACE} exec -it {POD_NAME} -- bash
+$ sqlplus / as sqlplus
+$ @?/rdbms/admin/awrrpt.sql
+
+# provide the deatils like tyep, begin and end snapshot id, file name, it will create a AWR report, copy this file to local and analyze the report fot performace impact.
+```
+| #   | Database Version | CPU / SGA | Users | Avg TPS | Total Tx / 5 min | Snapshot Size | Snapshot Time | Notes |
+| --- | ---------------- | --------- | ----- | ------- | ---------------- | ------------- | ------------- | ----- |
+| 1   | 12.2.0.1         | 4C / 5G   | 30    | 1000    | 300031           | 40G           | 00:02:33      |       |
+| 2   | 12.2.0.1         | 4C / 5G   | 200   | 1075    | 322516           | 40G           | 00:04:30      |       |
 
 ## Cleanup
 
@@ -169,3 +183,8 @@ Remove Blueprint
 $ kubectl delete blueprints oracle-blueprint -n kasten-io
 ```
 
+
+## Conclusion
+Below is the database performance charts showing number of commits, database time and redo generated during the test.  As you can see in the below chart, we ran a test at 7:52, Database time has a spike but there is not much impact on the number of transactions processed by the database. End user response time was intact.  The spike is mainly due to increased time taken the `log file parallel write` event for the short duration when the snapshot was taken. 
+
+![Test 1](Images/Test_1_30u.png)
